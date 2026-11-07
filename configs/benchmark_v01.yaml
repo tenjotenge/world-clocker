@@ -1,0 +1,10 @@
+schema_version: 1
+provider: openai
+base_url: http://localhost:1234/v1
+repeats: 8
+temperature: 0.7
+top_p: 1.0
+send_seed: false
+distance: 0.25
+stability: 0.8
+bootstrap: 500

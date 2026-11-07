@@ -1,0 +1,5 @@
+schema_version: 1
+provider: mock
+model: structured
+repeats: 4
+bootstrap: 100
