@@ -1,11 +1,12 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import date
 from math import isfinite
 from pathlib import Path
 from urllib.parse import urlsplit
 
 import yaml
 
-from .calibration import Calibration
+from .calibration import Calibration, QuadraticCalibration, load_calibration
 from .pilot import probe_bank
 
 
@@ -28,7 +29,8 @@ class Settings:
     bootstrap: int = 200
     configuration_ids: tuple[str, ...] | None = None
     benchmark: str = "0.1.0"
-    calibration: Calibration = Calibration()
+    calibration: Calibration | QuadraticCalibration = Calibration()
+    model_annotations: dict[str, str | int] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if type(self.schema_version) is not int or self.schema_version != 1:
@@ -36,9 +38,37 @@ class Settings:
         if self.benchmark not in ("0.1.0", "0.2.0"):
             raise ValueError("Unsupported benchmark version")
         if isinstance(self.calibration, dict):
-            object.__setattr__(self, "calibration", Calibration(**self.calibration))
-        if not isinstance(self.calibration, Calibration):
+            object.__setattr__(self, "calibration", load_calibration(self.calibration))
+        if not isinstance(self.calibration, (Calibration, QuadraticCalibration)):
             raise ValueError("calibration must be a mapping")
+        if not isinstance(self.model_annotations, dict):
+            raise ValueError("model_annotations must be a mapping")
+        annotations = dict(self.model_annotations)
+        for key, value in annotations.items():
+            if key == "parameter_count":
+                if type(value) is not int or value < 1:
+                    raise ValueError("parameter_count must be a positive integer")
+            elif key == "release_date":
+                if type(value) is date:
+                    annotations[key] = value.isoformat()
+                elif isinstance(value, str) and date.fromisoformat(value).isoformat() == value:
+                    continue
+                else:
+                    raise ValueError("release_date must use YYYY-MM-DD")
+            elif (
+                key
+                not in (
+                    "family",
+                    "architecture",
+                    "quantization",
+                    "training_specialization",
+                    "inference_backend",
+                )
+                or not isinstance(value, str)
+                or not value.strip()
+            ):
+                raise ValueError(f"Invalid model annotation: {key}")
+        object.__setattr__(self, "model_annotations", annotations)
         if self.provider not in ("mock", "openai"):
             raise ValueError("provider must be mock or openai")
         if self.model is not None and (not isinstance(self.model, str) or not self.model.strip()):

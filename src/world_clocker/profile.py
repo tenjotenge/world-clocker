@@ -6,15 +6,22 @@ from statistics import mean
 
 import numpy as np
 
-from .calibration import Calibration
+from .calibration import load_calibration
 from .metrics import analyze, packing
 
 SCORING_VERSION = 1
 
 
-def city_catalog() -> dict:
-    resource = files("world_clocker").joinpath("data", "cities-v1.json")
-    return json.loads(resource.read_text(encoding="utf-8"))
+def city_catalog(version: int = 1) -> dict:
+    data = files("world_clocker").joinpath("data")
+    catalog = json.loads(data.joinpath("cities-v1.json").read_text(encoding="utf-8"))
+    if version == 2:
+        extension = data.joinpath("cities-v2-additions.json")
+        additions = json.loads(extension.read_text(encoding="utf-8"))
+        catalog["version"] = additions["version"]
+        catalog["entries"].extend(additions["entries"])
+        catalog["aspirational_tiers"].extend(additions["entries"])
+    return catalog
 
 
 def closest_city(population: int, entries: list[dict]) -> dict:
@@ -45,11 +52,14 @@ def condition_repertoire(
     return packing(order, set(order), distances, threshold)[0], order
 
 
-def city_equivalent(manifest: dict, raw: dict, catalog: dict) -> dict:
+def city_equivalent(manifest: dict, raw: dict, calibration_version: int | None = None) -> dict:
     settings = manifest["settings"]
     coverage = raw["coverage"]
     metrics = raw["metrics"]
-    calibration = Calibration(**settings.get("calibration", {}))
+    calibration = load_calibration(settings.get("calibration", {}))
+    if calibration_version is not None and calibration_version != calibration.version:
+        calibration = load_calibration({"version": calibration_version})
+    catalog = city_catalog(calibration.version)
     total = coverage["planned"]
     valid_fraction = coverage["valid"] / total if total else 0
     result = {
@@ -60,14 +70,21 @@ def city_equivalent(manifest: dict, raw: dict, catalog: dict) -> dict:
         "city_catalog_version": catalog["version"],
         "city_boundary_policy": catalog["boundary_policy"],
         "aspirational_tiers": catalog["aspirational_tiers"],
-        "formula": "max(0, weak_repertoire - 1) / (reference_repertoire - 1)",
-        "population_mapping": "minimum_population * (reference_population / minimum_population)^normalized_complexity",
+        "formula": calibration.index_formula,
+        "population_mapping": calibration.population_formula,
         "interpretation": "Metaphorical complexity index, not a human simulation capacity estimate.",
         "weights": {"stable_weak_repertoire": 1, "descriptive_rank": 0, "entropy": 0},
         "normalized_complexity": None,
+        "stable_weak_repertoire_count": None,
+        "minimum_replicated_heldout_distance": None,
         "equivalent_population": None,
         "closest_city": None,
         "population_order_sensitivity_95": None,
+        "repertoire_order_sensitivity_95": None,
+        "population_interval_scope": (
+            "Packing order sensitivity conditional on the observed decisions. "
+            "Experimental repeatability and calibration uncertainty are unestimated."
+        ),
         "condition_diagnostics": {},
         "valid_fraction": valid_fraction,
         "warnings": [],
@@ -111,6 +128,7 @@ def city_equivalent(manifest: dict, raw: dict, catalog: dict) -> dict:
         reasons.append("Fewer than 95% of planned responses produced valid decisions.")
     if settings["distance"] < 0.2 or settings["stability"] < 0.8:
         reasons.append("Calibration requires distance >= 0.2 and stability >= 0.8.")
+    result["stable_weak_repertoire_count"] = len(packs["weak"][0])
     if reasons:
         return result
 
@@ -125,17 +143,42 @@ def city_equivalent(manifest: dict, raw: dict, catalog: dict) -> dict:
     count = len(pack)
     population = calibration.population(count)
     city = closest_city(population, catalog["entries"])
+    population_band = [calibration.population(value) for value in band]
+    heldout = {
+        (pair["left"], pair["right"]): pair["replicated_heldout"] for pair in metrics["distances"]
+    }
+    synthetic = settings["provider"] == "mock"
     result.update(
-        status="provisional",
-        confidence="synthetic-control" if settings["provider"] == "mock" else "exploratory",
+        status="diagnostic" if synthetic and calibration.version == 2 else "provisional",
+        confidence="synthetic-control" if synthetic else "exploratory",
         normalized_complexity=calibration.normalized(count),
         equivalent_population=population,
         closest_city=city,
-        population_order_sensitivity_95=[calibration.population(value) for value in band],
+        population_order_sensitivity_95=population_band,
+        repertoire_order_sensitivity_95=band,
+        minimum_replicated_heldout_distance=min(
+            (
+                heldout[left, right]
+                for i, left in enumerate(sorted(pack))
+                for right in sorted(pack)[i + 1 :]
+            ),
+            default=None,
+        ),
         weak_repertoire=pack,
     )
-    if count > calibration.reference_repertoire:
-        reasons.append("Population extrapolates above the upper calibration anchor.")
+    if calibration.version == 1 and max(count, *band) > calibration.reference_repertoire:
+        reasons.append("Point or interval extrapolates above the upper calibration anchor.")
+    if calibration.version == 2:
+        result["pilot_repertoire_ceiling"] = result["condition_diagnostics"]["weak"]["planned"]
+        reasons.append(
+            "The pilot can count at most 48 weak policies. It cannot resolve major-city tiers "
+            "under this mapping, and city labels do not add measurement resolution."
+        )
+        if synthetic:
+            reasons.append("Synthetic population is a mathematical diagnostic only.")
+        possible_cities = [closest_city(value, catalog["entries"]) for value in population_band]
+        if any(candidate != city for candidate in possible_cities):
+            reasons.append("Closest reference city varies with packing order.")
     if population < min(entry["population"] for entry in catalog["entries"]) or population > max(
         entry["population"] for entry in catalog["entries"]
     ):
@@ -143,7 +186,9 @@ def city_equivalent(manifest: dict, raw: dict, catalog: dict) -> dict:
     return result
 
 
-def capacity_profile(manifest: dict, rows: list[dict]) -> dict:
+def capacity_profile(
+    manifest: dict, rows: list[dict], calibration_version: int | None = None
+) -> dict:
     raw = analyze(manifest, rows)
     fingerprints = {
         fingerprint
@@ -154,9 +199,10 @@ def capacity_profile(manifest: dict, rows: list[dict]) -> dict:
     return {
         "profile_version": 1,
         "model_version": metadata.get("version") or metadata.get("revision"),
+        "model_annotations": manifest["settings"].get("model_annotations", {}),
         "observed_system_fingerprints": sorted(fingerprints),
         **raw,
-        "city_equivalent": city_equivalent(manifest, raw, city_catalog()),
+        "city_equivalent": city_equivalent(manifest, raw, calibration_version),
     }
 
 
@@ -197,14 +243,28 @@ def profile_text(profile: dict) -> str:
         f"Scoring v{score['scoring_version']} / calibration v{score['calibration']['version']} "
         f"/ city catalog v{score['city_catalog_version']}",
     ]
+    weak_count = score.get("stable_weak_repertoire_count")
+    if weak_count is not None:
+        lines.append(f"Stable weak-prompt repertoire: {weak_count}")
+    if score["normalized_complexity"] is not None:
+        lines.append(f"Normalized complexity index: {score['normalized_complexity']:.6g}")
+    heldout = score.get("minimum_replicated_heldout_distance")
+    if heldout is not None:
+        lines.append(f"Minimum replicated held-out distance in weak pack: {heldout:.3f}")
+    for key, value in profile.get("model_annotations", {}).items():
+        lines.append(f"Model annotation ({key}): {value}")
+    inference = profile["inference_settings"]
+    sampling = ", ".join(f"{key}={value}" for key, value in inference.items())
+    lines.append(f"Inference and sampling: {sampling}")
+    lines.append(f"Complexity index formula: {score['formula']}")
+    lines.append(f"Population formula: {score['population_mapping']}")
     if city:
         lines.append(f"City source: {city['source']}")
         lines.append(f"Reference boundaries: {score['city_boundary_policy']}")
-        weak = score["condition_diagnostics"]["weak"]["stable_repertoire"]
-        lines.append(f"Stable weak-prompt repertoire used in score: {weak}")
     if score["population_order_sensitivity_95"] is not None:
         lower, upper = score["population_order_sensitivity_95"]
         lines.append(f"Population order sensitivity (95%): {lower:,} to {upper:,}")
+        lines.append(score["population_interval_scope"])
     if metrics:
         lower, upper = metrics["family_bootstrap_95"]["repeat_agreement"]
         lines.append(f"Stability family-bootstrap interval (95%): {lower:.1%} to {upper:.1%}")

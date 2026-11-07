@@ -59,14 +59,18 @@ def arguments(argv: list[str] | None) -> argparse.Namespace:
     report = commands.add_parser("report")
     report.add_argument("run_ids", nargs="+")
     report.add_argument("--output", type=Path, required=True)
+    for command in (analysis, profile, export, report):
+        command.add_argument("--calibration-version", type=int, choices=(1, 2))
     return parser.parse_args(argv)
 
 
-def export_rows(manifest: dict, rows: list[dict], mode: str) -> None:
+def export_rows(
+    manifest: dict, rows: list[dict], mode: str, calibration_version: int | None = None
+) -> None:
     if mode == "json":
         print_json(
             {
-                "profile": capacity_profile(manifest, rows),
+                "profile": capacity_profile(manifest, rows, calibration_version),
                 "manifest": manifest,
                 "observations": rows,
             }
@@ -74,7 +78,11 @@ def export_rows(manifest: dict, rows: list[dict], mode: str) -> None:
     elif mode == "jsonl":
         print(
             json.dumps(
-                {"type": "manifest", **manifest, "profile": capacity_profile(manifest, rows)}
+                {
+                    "type": "manifest",
+                    **manifest,
+                    "profile": capacity_profile(manifest, rows, calibration_version),
+                }
             )
         )
         for row in rows:
@@ -117,6 +125,12 @@ def print_run(db: sqlite3.Connection, summary: dict) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = arguments(argv)
     try:
+        calibration_version = getattr(args, "calibration_version", None)
+        if calibration_version is not None and (
+            (args.command == "analyze" and args.raw)
+            or (args.command == "export" and args.format == "csv")
+        ):
+            raise ValueError("Calibration selection requires profile output")
         if args.command in ("models", "doctor"):
             settings = load_settings(args.config) if args.config else Settings(provider="openai")
             models = provider_for(settings).models()
@@ -179,7 +193,8 @@ def main(argv: list[str] | None = None) -> int:
             elif args.command == "report":
                 manifests = [load_run(db, run_id) for run_id in args.run_ids]
                 reports = [
-                    capacity_profile(item, observations(db, item["run_id"])) for item in manifests
+                    capacity_profile(item, observations(db, item["run_id"]), calibration_version)
+                    for item in manifests
                 ]
                 render(reports, manifests, args.output)
                 print_json(
@@ -192,11 +207,11 @@ def main(argv: list[str] | None = None) -> int:
                 manifest = load_run(db, args.run_id)
                 rows = observations(db, args.run_id)
                 if args.command == "export":
-                    export_rows(manifest, rows, args.format)
+                    export_rows(manifest, rows, args.format, calibration_version)
                 elif args.command == "analyze" and args.raw:
                     print_json(analyze(manifest, rows))
                 else:
-                    profile = capacity_profile(manifest, rows)
+                    profile = capacity_profile(manifest, rows, calibration_version)
                     if args.command == "profile" and not args.json:
                         print(profile_text(profile))
                     else:

@@ -4,12 +4,18 @@ from pathlib import Path
 
 import pytest
 
-from world_clocker.calibration import Calibration
+from world_clocker.calibration import Calibration, QuadraticCalibration
 from world_clocker.cli import main
 from world_clocker.config import Settings, load_settings
 from world_clocker.metrics import analyze
 from world_clocker.pilot import probe_bank
-from world_clocker.profile import capacity_profile, closest_city, condition_repertoire
+from world_clocker.profile import (
+    capacity_profile,
+    city_catalog,
+    city_equivalent,
+    closest_city,
+    condition_repertoire,
+)
 from world_clocker.providers import MockProvider
 from world_clocker.reporting import render
 from world_clocker.runner import connect, create_run, evaluate, execute, load_run
@@ -54,6 +60,14 @@ def test_full_pilot_controls(pilot, model, expected):
     assert score["confidence"] == "synthetic-control"
     assert score["condition_diagnostics"]["weak"]["stable_repertoire"] == expected
     assert score["equivalent_population"] == Calibration().population(expected)
+    revised = city_equivalent(manifest, profile, 2)
+    assert revised["status"] == "diagnostic"
+    assert revised["confidence"] == "synthetic-control"
+    assert revised["stable_weak_repertoire_count"] == expected
+    assert revised["equivalent_population"] == (102_400 if expected == 32 else 100)
+    assert revised["repertoire_order_sensitivity_95"] == [expected, expected]
+    assert "calibration uncertainty are unestimated" in revised["population_interval_scope"]
+    assert profile["city_equivalent"]["calibration"]["version"] == 1
     assert profile["metrics"]["saturation"]["discovered"][-1] == expected
     assert profile["metrics"]["saturation"]["candidates"][-1] == 100
     if model == "random":
@@ -62,6 +76,27 @@ def test_full_pilot_controls(pilot, model, expected):
         assert 4 < profile["metrics"]["effective_rank"] <= 5
     else:
         assert profile["metrics"]["effective_rank"] == 0
+    return_value = revised["equivalent_population"]
+    # The same observed policy can belong to any checkpoint or quantization.
+    for label, size, release, quant in (
+        ("older", 7_000_000_000, "2023-07-18", "Q3_K_M"),
+        ("newer", 7_000_000_000, "2026-01-01", "Q5_K_M"),
+        ("larger", 30_000_000_000, "2024-01-01", "Q8_0"),
+    ):
+        altered = dict(
+            manifest,
+            model=label,
+            model_metadata={"id": label, "parameter_count": size},
+            settings=dict(
+                manifest["settings"],
+                model_annotations={
+                    "parameter_count": size,
+                    "release_date": release,
+                    "quantization": quant,
+                },
+            ),
+        )
+        assert city_equivalent(altered, profile, 2)["equivalent_population"] == return_value
 
 
 def test_score_repertoire_deduplicates_and_ignores_unstable():
@@ -105,6 +140,48 @@ def test_city_matching_is_logarithmic():
         {"population": 1_000, "city": "B", "country": "B"},
     ]
     assert closest_city(400, entries)["city"] == "B"
+    assert all(city["source"].startswith("https://") for city in city_catalog(2)["entries"])
+    assert closest_city(10_416_000, city_catalog(2)["entries"])["city"] == "London"
+    assert all(city["city"] != "London" for city in city_catalog()["entries"])
+
+
+def test_quadratic_is_exact_and_unbounded():
+    calibration = QuadraticCalibration()
+    assert calibration.normalized(32) == 31
+    values = [calibration.population(count) for count in range(49)]
+    assert values[:2] == [100, 100]
+    assert all(left < right for left, right in zip(values[1:], values[2:]))
+    assert values[-1] == 230_400
+    assert calibration.population(10**100) == 10**202
+    assert calibration.population(10**100) == calibration.population(10**100)
+    assert Calibration().population(32) == 3_947_280
+
+
+def test_v03_config_keeps_pilot_and_persists_metadata(pilot):
+    settings = load_settings(Path("configs/benchmark_v03.yaml"))
+    settings = replace(
+        settings,
+        provider="mock",
+        model="structured",
+        model_annotations={
+            "family": "Example",
+            "release_date": "2026-01-01",
+            "parameter_count": 7_000_000_000,
+            "architecture": "dense decoder",
+            "quantization": "Q5_K_M",
+            "training_specialization": "code",
+            "inference_backend": "LM Studio",
+        },
+    )
+    with closing(connect(Path(":memory:"))) as db:
+        run = create_run(db, settings, MockProvider())
+        manifest = load_run(db, run)
+    assert manifest["plan_hash"] == pilot["plan_hash"]
+    assert manifest["settings"]["model_annotations"] == settings.model_annotations
+    profile = capacity_profile(manifest, [])
+    assert profile["model_annotations"] == settings.model_annotations
+    assert profile["city_equivalent"]["calibration"]["version"] == 2
+    assert profile["city_equivalent"]["equivalent_population"] is None
 
 
 def test_small_and_incomplete_profiles_are_uncalibrated(tmp_path, pilot, capsys):
@@ -119,6 +196,8 @@ def test_small_and_incomplete_profiles_are_uncalibrated(tmp_path, pilot, capsys)
     args = ["--db", str(db_path), "profile", run_id]
     assert main(args) == 0
     assert "Equivalent population: uncalibrated" in capsys.readouterr().out
+    assert main(args + ["--calibration-version", "2"]) == 0
+    assert "calibration v2" in capsys.readouterr().out
     partial = capacity_profile(pilot, [])
     assert partial["city_equivalent"]["equivalent_population"] is None
     assert "city_equivalent" not in analyze(pilot, [])

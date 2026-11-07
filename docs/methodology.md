@@ -92,7 +92,7 @@ valid draws, and distances retain the original half assignments. The
 v0.1 estimator keeps its complete-cell rule. Missing decisions can bias
 both estimators, especially if errors favor a particular choice or prompt.
 
-## v0.2 city-equivalent index
+## Historical calibration v1
 
 Scoring v1 uses the weak-prompt repertoire only. Among weak prompts
 that pass the repeated and paraphrase agreement gates on both splits,
@@ -139,6 +139,62 @@ separate metropolitan Tokyo aspirational tier uses the four-prefecture
 definition from Japan's preliminary 2025 census. City labels are
 illustrative analogies sensitive to the available references and their
 boundaries. [U.S. incorporated places](https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html) · [U.S. urban areas](https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html) · [UN urban areas](https://population.un.org/wup/assets/Publications/undesa_pd_2025_wup2025_summary_of_results_final.pdf) · [Japan census](https://www.stat.go.jp/english/info/news/20260625.html)
+
+## v0.3 population rescaling
+
+The saved v0.2 controls recovered 32, one and zero stable weak policies
+for the structured, constant and random oracles. The v1 formula mapped
+those counts to 3,947,280, 500 and 500. The observed control separation
+validates the mechanics of packing and rejection. It supplies no
+real-model population anchor. The available live runs were underpowered
+smoke tests and supply no complete model score distribution.
+
+v0.3 keeps the experiment, eligibility requirements and scoring v1 pack.
+Calibration v2 first computes **I = max(0, K - 1)** in excess-policy units,
+where one unit is one additional distinguishable policy beyond a single
+baseline policy. The index has no fixed upper bound. Then it computes
+**P = 100 × (1 + I)²**. The floor of 100 sets the illustrative scale
+for zero or one stable policy. The square makes a doubling in
+baseline-adjusted repertoire correspond to a fourfold population change.
+Both choices are conventional and fixed for v2. They were neither fitted
+to synthetic controls nor tuned to model names or desired populations.
+For comparison, v1 used **I = max(0, K - 1) / 39** and
+**P = round(500 × (40,000,000 / 500)^I)** at its default settings.
+
+The 48 weak prompts permit at most 49 raw integer counts and 48 distinct
+population values. The pilot has not established how many counts can be
+distinguished reliably across independent runs. The largest possible
+pilot output is 230,400, so the upper conceptual tiers remain outside
+its evidence range. London (10,416,000, UN urban area, 2025) is an
+aspirational reference alongside New York City and metropolitan Tokyo.
+The transform itself has no city cap. Larger input counts are hypothetical
+until a future protocol can measure them. Catalog v1 remains available
+with calibration v1. [UN World Urbanization Prospects 2025](https://population.un.org/wup/assets/Publications/undesa_pd_2025_wup2025_summary_of_results_final.pdf)
+
+Under v2 the structured oracle maps to 102,400 and the constant and
+random oracles map to 100. These are mathematical diagnostics.
+An exact output or a zero-width packing-order band says nothing about
+calibration validity. The population band maps the 2.5th and 97.5th
+percentiles of repertoire over shuffled packing orders on the same
+observations. It does not estimate differences between independent
+inference runs or uncertainty in the choice of calibration. Quantization
+comparisons need replicated matched runs to assess whether observed
+differences exceed experimental variability.
+
+### Generational comparisons
+
+Parameter count measures the number of learned coefficients. Architectural
+capacity concerns the structures a design can represent. Realized behavioral
+complexity is the stable differentiation observed under this protocol.
+Behavioral efficiency asks how much realized complexity training produces
+within a resource budget. Population-equivalent interpretation gives that
+measured differentiation a geographic metaphor. Changes in training,
+architecture, or post-training could let a newer 7B model express far
+more stable policies than an older 7B model. The opposite ordering is
+also possible on these probes. Parameter count, release date, specialization,
+and quantization belong in explanatory metadata. They carry no scoring
+weight, and the historical population ranges are hypotheses to compare
+against evidence rather than calibration labels.
 
 ## Research bibliography
 

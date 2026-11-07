@@ -29,3 +29,33 @@ class Calibration:
             ratio = Decimal(self.reference_population) / floor
             score = Decimal(max(0, repertoire - 1)) / (self.reference_repertoire - 1)
             return round(floor * ratio**score)
+
+    index_formula = "max(0, K - 1) / (reference_repertoire - 1)"
+    population_formula = (
+        "round(minimum_population * (reference_population / minimum_population)^index)"
+    )
+
+
+@dataclass(frozen=True)
+class QuadraticCalibration:
+    version: int = 2
+
+    def __post_init__(self) -> None:
+        if type(self.version) is not int or self.version != 2:
+            raise ValueError("Unsupported quadratic calibration version")
+
+    index_formula = "max(0, K - 1)"
+    population_formula = "100 * (1 + index)^2"
+
+    def normalized(self, repertoire: int) -> int:
+        return max(0, repertoire - 1)
+
+    def population(self, repertoire: int) -> int:
+        return 100 * (1 + self.normalized(repertoire)) ** 2
+
+
+def load_calibration(data: dict) -> Calibration | QuadraticCalibration:
+    version = data.get("version", 1)
+    if type(version) is not int or version not in (1, 2):
+        raise ValueError("Unsupported calibration version")
+    return Calibration(**data) if version == 1 else QuadraticCalibration(**data)

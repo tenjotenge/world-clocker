@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "entries": [
+    {
+      "city": "London",
+      "country": "United Kingdom",
+      "population": 10416000,
+      "geography": "urban area",
+      "year": 2025,
+      "source": "https://population.un.org/wup/assets/Publications/undesa_pd_2025_wup2025_summary_of_results_final.pdf",
+      "aspirational": true
+    }
+  ]
+}

@@ -7,7 +7,7 @@ complexity. It reports a profile with rank, entropy, stability, distances and
 discovery curves. See [methodology](docs/methodology.md) and
 [architecture](docs/architecture.md).
 
-## v0.2 factorial pilot
+## v0.3 scoring on the v0.2 factorial pilot
 
 The v0.2 definition runs 100 prompts against 30 probes with four repeats
 by default. It includes 48 matched strong and weak prompt pairs, four
@@ -15,8 +15,8 @@ neutral controls, and five held-out scenario families. Run it offline with
 the structured, constant, or random synthetic provider:
 
 ```powershell
-& $wc benchmark validate configs/benchmark_v02.yaml
-& $wc benchmark run configs/benchmark_v02.yaml --provider mock --model structured
+& $wc benchmark validate configs/benchmark_v03.yaml
+& $wc benchmark run configs/benchmark_v03.yaml --provider mock --model structured
 & $wc profile RUN_ID
 & $wc profile RUN_ID --json
 & $wc analyze RUN_ID --raw
@@ -28,12 +28,28 @@ Set `$wc` using the installation instructions below. For LM Studio, omit
 trials per model. Use `--budget` to limit a batch and `benchmark resume`
 to continue. Small subsets and unfinished runs report an uncalibrated city.
 
-The capacity profile includes a **provisional city-equivalent population**
-when the pilot meets its evidence requirements. This is a metaphorical index
-of stable weak-prompt differentiation. Raw metrics remain available through
-`analyze --raw`. The text and JSON reports include the city boundary, source,
-reference year, coverage, and confidence. Install the optional `plots` extra
-to also generate a PNG. See the [scoring methodology](docs/methodology.md#v02-city-equivalent-index).
+Calibration v2 assigns a **provisional city-equivalent population** of
+`100 * max(1, K)^2` for a sufficiently covered pilot, where K is the
+stable weak-prompt repertoire. The pilot has 48 weak candidates, so its
+largest possible estimate on this scale is 230,400. The formula itself
+can extrapolate beyond that evidence limit. A synthetic score is a
+mathematical diagnostic. Equivalent population is a metaphor for
+measured behavioral differences.
+
+Historical runs keep their saved calibration. Add `--calibration-version 2`
+to `profile`, `analyze`, `report`, or JSON/JSONL `export` to rescore them
+without editing SQLite or replaying inference. Raw metrics remain available
+through `analyze --raw`. Text and JSON profiles include coverage, confidence,
+and sourced city populations. Install the optional `plots` extra for PNGs.
+See the [scoring methodology](docs/methodology.md#v03-population-rescaling).
+
+For matched model studies, keep a YAML file per checkpoint and use the
+optional `model_annotations` mapping. Supported keys are `family`,
+`release_date` (YYYY-MM-DD), `parameter_count` (positive integer),
+`architecture`, `quantization`, `training_specialization`, and
+`inference_backend`. Bind the file to the checkpoint with the `model`
+field. Only record known values. These annotations and the provider's
+model metadata are retained for interpretation.
 
 ## Offline smoke test
 
