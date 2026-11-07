@@ -11,6 +11,7 @@ import yaml
 from .config import Settings, load_settings
 from .metrics import analyze
 from .probes import plan
+from .profile import capacity_profile, profile_text
 from .providers import provider_for
 from .reporting import render
 from .runner import connect, create_run, execute, load_run, observations
@@ -42,10 +43,16 @@ def arguments(argv: list[str] | None) -> argparse.Namespace:
     run.add_argument("--dry-run", action="store_true")
     run.add_argument("--budget", type=positive)
     run.add_argument("--model")
+    run.add_argument("--provider", choices=("mock", "openai"))
     resume = benchmark.add_parser("resume")
     resume.add_argument("run_id")
     resume.add_argument("--budget", type=positive)
-    commands.add_parser("analyze").add_argument("run_id")
+    analysis = commands.add_parser("analyze")
+    analysis.add_argument("run_id")
+    analysis.add_argument("--raw", action="store_true")
+    profile = commands.add_parser("profile")
+    profile.add_argument("run_id")
+    profile.add_argument("--json", action="store_true")
     export = commands.add_parser("export")
     export.add_argument("run_id")
     export.add_argument("--format", choices=("json", "jsonl", "csv"), default="json")
@@ -57,9 +64,19 @@ def arguments(argv: list[str] | None) -> argparse.Namespace:
 
 def export_rows(manifest: dict, rows: list[dict], mode: str) -> None:
     if mode == "json":
-        print_json({"manifest": manifest, "observations": rows})
+        print_json(
+            {
+                "profile": capacity_profile(manifest, rows),
+                "manifest": manifest,
+                "observations": rows,
+            }
+        )
     elif mode == "jsonl":
-        print(json.dumps({"type": "manifest", **manifest}))
+        print(
+            json.dumps(
+                {"type": "manifest", **manifest, "profile": capacity_profile(manifest, rows)}
+            )
+        )
         for row in rows:
             print(json.dumps({"type": "observation", **row}))
     else:
@@ -87,6 +104,14 @@ def export_rows(manifest: dict, rows: list[dict], mode: str) -> None:
             writer.writerow(
                 dict(row, error=json.dumps(row["error"]), metadata=json.dumps(row["metadata"]))
             )
+
+
+def print_run(db: sqlite3.Connection, summary: dict) -> None:
+    if summary["recorded"] == summary["planned"]:
+        run_id = summary["run_id"]
+        profile = capacity_profile(load_run(db, run_id), observations(db, run_id))
+        summary["city_equivalent"] = profile["city_equivalent"]
+    print_json(summary)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -122,12 +147,19 @@ def main(argv: list[str] | None = None) -> int:
             settings = load_settings(args.config)
             if getattr(args, "model", None):
                 settings = replace(settings, model=args.model)
+            if getattr(args, "provider", None):
+                settings = replace(settings, provider=args.provider)
             if args.action == "validate" or args.dry_run:
                 print_json(
                     {
                         "valid": True,
                         "planned": len(
-                            plan(settings.seed, settings.repeats, settings.configuration_ids)
+                            plan(
+                                settings.seed,
+                                settings.repeats,
+                                settings.configuration_ids,
+                                settings.benchmark,
+                            )
                         ),
                     }
                 )
@@ -136,26 +168,39 @@ def main(argv: list[str] | None = None) -> int:
             with closing(connect(args.db)) as db:
                 run_id = create_run(db, settings, provider)
                 print(f"Run ID {run_id}", file=sys.stderr, flush=True)
-                print_json(execute(db, run_id, args.budget, provider))
+                print_run(db, execute(db, run_id, args.budget, provider))
             return 0
 
         if not args.db.is_file():
             raise ValueError(f"Database does not exist: {args.db}")
         with closing(connect(args.db)) as db:
             if args.command == "benchmark":
-                print_json(execute(db, args.run_id, args.budget))
+                print_run(db, execute(db, args.run_id, args.budget))
             elif args.command == "report":
                 manifests = [load_run(db, run_id) for run_id in args.run_ids]
-                reports = [analyze(item, observations(db, item["run_id"])) for item in manifests]
+                reports = [
+                    capacity_profile(item, observations(db, item["run_id"])) for item in manifests
+                ]
                 render(reports, manifests, args.output)
-                print_json({"output": str(args.output)})
+                print_json(
+                    {
+                        "output": str(args.output),
+                        "city_equivalents": [profile["city_equivalent"] for profile in reports],
+                    }
+                )
             else:
                 manifest = load_run(db, args.run_id)
                 rows = observations(db, args.run_id)
                 if args.command == "export":
                     export_rows(manifest, rows, args.format)
-                else:
+                elif args.command == "analyze" and args.raw:
                     print_json(analyze(manifest, rows))
+                else:
+                    profile = capacity_profile(manifest, rows)
+                    if args.command == "profile" and not args.json:
+                        print(profile_text(profile))
+                    else:
+                        print_json(profile)
         return 0
     except (
         ValueError,

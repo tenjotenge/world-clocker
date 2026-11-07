@@ -130,27 +130,42 @@ def scenarios() -> list[Scenario]:
     ]
 
 
-def prompt(config: Configuration, scenario: Scenario, flipped: bool) -> tuple[str, str]:
+def prompt(
+    config: Configuration, scenario: Scenario, flipped: bool, benchmark: str = "0.1.0"
+) -> tuple[str, str]:
     mapping = "10" if flipped else "01"
     options = [scenario.options[int(index)] for index in mapping]
     instructions = " ".join(config.priorities)
     text = (
         f"{instructions}\nChoose one action.\n{scenario.question}\n"
         f"A. {options[0]}\nB. {options[1]}\n"
-        'Return only JSON with a choice of "A" or "B", '
-        'for example {"choice":"A"}. An "explanation" string is optional.'
     )
+    if benchmark == "0.2.0":
+        text += 'Return a single JSON object with one key "choice" and a value of "A" or "B".'
+    else:
+        text += (
+            'Return only JSON with a choice of "A" or "B", '
+            'for example {"choice":"A"}. An "explanation" string is optional.'
+        )
     return text.strip(), mapping
 
 
-def plan(seed: int, repeats: int, configuration_ids: tuple[str, ...] | None = None) -> list[dict]:
+def plan(
+    seed: int,
+    repeats: int,
+    configuration_ids: tuple[str, ...] | None = None,
+    benchmark: str = "0.1.0",
+) -> list[dict]:
+    from .pilot import probe_bank
+
     rng = Random(seed)
     trials = []
-    for config in configurations():
-        for scenario in scenarios():
+    candidates, probes = probe_bank(benchmark)
+    for config in candidates:
+        for scenario in probes:
             first_flip = rng.randrange(2)
             for repeat in range(repeats):
-                text, mapping = prompt(config, scenario, bool((first_flip + repeat) % 2))
+                text, mapping = prompt(config, scenario, bool((first_flip + repeat) % 2), benchmark)
                 trials.append(
                     {
                         "configuration": config.id,

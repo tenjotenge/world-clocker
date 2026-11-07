@@ -1,5 +1,6 @@
 from collections import Counter, defaultdict
 from itertools import combinations
+from math import ceil
 
 import numpy as np
 
@@ -42,21 +43,32 @@ def analyze(manifest: dict, rows: list[dict]) -> dict:
     ]
     heldout = [i for i in range(len(families)) if i not in discovery]
     configs = sorted(manifest["configurations"])
-    data = defaultdict(list)
+    data = defaultdict(dict)
     for row in rows:
         if row["decision"] is not None:
-            data[row["configuration"], row["scenario"]].append((row["repeat"], row["decision"]))
+            data[row["configuration"], row["scenario"]][row["repeat"]] = row["decision"]
+    repeats = settings["repeats"]
+    midpoint = repeats // 2
+    pilot = manifest["benchmark_version"] == "0.2.0"
+
+    def cell_usable(cell: dict) -> bool:
+        if not pilot:
+            return len(cell) == repeats
+        return len(cell) >= max(2, ceil(0.75 * repeats)) and min(
+            cell, default=repeats
+        ) < midpoint <= max(cell, default=-1)
+
     primary_probes = [
         probe for probe, item in probes.items() if item["variant"] != "counterfactual"
     ]
     usable = [
         config
         for config in configs
-        if all(len(data[config, probe]) == settings["repeats"] for probe in primary_probes)
+        if all(cell_usable(data[config, probe]) for probe in primary_probes)
     ]
     errors = Counter(row["error"]["kind"] for row in rows if row["error"])
     output = {
-        "metric_version": 1,
+        "metric_version": 2 if pilot else 1,
         "run_id": manifest["run_id"],
         "model": manifest["model"],
         "plan_hash": manifest["plan_hash"],
@@ -93,7 +105,10 @@ def analyze(manifest: dict, rows: list[dict]) -> dict:
         [
             [
                 [
-                    [action for _, action in sorted(data[config, f"{family}-{variant}"])]
+                    [
+                        data[config, f"{family}-{variant}"].get(index, np.nan)
+                        for index in range(repeats)
+                    ]
                     for variant in ("base", "paraphrase")
                 ]
                 for family in families
@@ -101,7 +116,7 @@ def analyze(manifest: dict, rows: list[dict]) -> dict:
             for config in usable
         ]
     )
-    ordinary = trials.mean(axis=-1)
+    ordinary = np.nanmean(trials, axis=-1)
     # Each base and paraphrase is weighted equally within its scenario family.
     feature = ordinary.reshape(len(usable), -1)
     eigenvalues, rank, ratio = spectrum(feature)
@@ -110,8 +125,8 @@ def analyze(manifest: dict, rows: list[dict]) -> dict:
     pooled = entropy(np.stack([1 - per_probe, per_probe], axis=-1)).mean()
     overall = per_probe.mean()
     total_entropy = entropy(np.array([1 - overall, overall]))
-    repeats = settings["repeats"]
-    repeat_agreement = ((ordinary**2 + (1 - ordinary) ** 2) * repeats - 1) / (repeats - 1)
+    counts = np.count_nonzero(~np.isnan(trials), axis=-1)
+    repeat_agreement = ((ordinary**2 + (1 - ordinary) ** 2) * counts - 1) / (counts - 1)
     paraphrase = ordinary[:, :, 0] * ordinary[:, :, 1] + (
         (1 - ordinary[:, :, 0]) * (1 - ordinary[:, :, 1])
     )
@@ -129,8 +144,8 @@ def analyze(manifest: dict, rows: list[dict]) -> dict:
     distances = {}
     pairwise = []
     # Use both splits and require a consistent directional difference in each repeat half.
-    halves = [trials[:, :, :, : repeats // 2], trials[:, :, :, repeats // 2 :]]
-    first, second = [half.mean(axis=-1) for half in halves]
+    halves = [trials[..., :midpoint], trials[..., midpoint:]]
+    first, second = [np.nanmean(half, axis=-1) for half in halves]
     for i, j in combinations(range(len(usable)), 2):
         a, b = first[i] - first[j], second[i] - second[j]
         replicated = np.where(a * b > 0, np.minimum(abs(a), abs(b)), 0)
@@ -154,7 +169,7 @@ def analyze(manifest: dict, rows: list[dict]) -> dict:
         for j, family in enumerate(families):
             cell = data[config, f"{family}-counterfactual"]
             if len(cell) == repeats:
-                probability = sum(action for _, action in cell) / repeats
+                probability = sum(cell.values()) / repeats
                 shifts.append(abs(ordinary[i, j, 0] - probability))
         counterfactuals[config] = {
             "counterfactual_mean_absolute_shift": float(np.mean(shifts)) if shifts else None,
@@ -189,6 +204,11 @@ def analyze(manifest: dict, rows: list[dict]) -> dict:
                 f"{family}-{variant}" for family in families for variant in ("base", "paraphrase")
             ],
             "choice_probabilities": feature.tolist(),
+            **(
+                {"repeat_half_probabilities": np.stack([first, second], axis=1).tolist()}
+                if pilot
+                else {}
+            ),
             "covariance_eigenvalues": eigenvalues,
             "effective_rank": rank,
             "participation_ratio": ratio,

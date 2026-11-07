@@ -1,16 +1,12 @@
 import json
 from pathlib import Path
 
+from .profile import profile_text
+
 
 def render(reports: list[dict], manifests: list[dict], destination: Path) -> None:
-    try:
-        import matplotlib
-    except ImportError as exc:
-        raise ValueError("Install world-clocker[plots] to generate static reports") from exc
-
-    matplotlib.use("Agg")
-    from matplotlib import pyplot as plt
-
+    if len({item["benchmark_version"] for item in manifests}) != 1:
+        raise ValueError("Incompatible benchmark versions")
     conditions = {
         (
             item["plan_hash"],
@@ -27,16 +23,42 @@ def render(reports: list[dict], manifests: list[dict], destination: Path) -> Non
     }
     if len(conditions) != 1:
         raise ValueError("Comparison requires matching plans, sampling controls and thresholds")
-    if any(
-        not report["metrics"]
-        or report["coverage"]["recorded"] != report["coverage"]["planned"]
-        or report["coverage"]["excluded_configurations"]
-        for report in reports
-    ):
-        raise ValueError(
-            "Plots require finished runs with valid base and paraphrase cells for every prompt."
+    scoring = {
+        (
+            report["metric_version"],
+            score["scoring_version"],
+            score["city_catalog_version"],
+            tuple(score["calibration"].items()),
         )
+        for report in reports
+        for score in (report["city_equivalent"],)
+    }
+    if len(scoring) != 1:
+        raise ValueError("Incompatible scoring, metric or calibration versions or settings")
+    if any(report["coverage"]["recorded"] != report["coverage"]["planned"] for report in reports):
+        raise ValueError("Static reports require finished runs. Use profile for interim results.")
     destination.mkdir(parents=True, exist_ok=True)
+    (destination / "profile.json").write_text(
+        json.dumps(reports, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    (destination / "profile.txt").write_text(
+        "\n\n".join(profile_text(report) for report in reports) + "\n",
+        encoding="utf-8",
+    )
+    if all(report["metrics"] for report in reports):
+        plot(reports, destination)
+
+
+def plot(reports: list[dict], destination: Path) -> None:
+    try:
+        import matplotlib
+    except ImportError:
+        return
+
+    matplotlib.use("Agg")
+    from matplotlib import pyplot as plt
+
     fig, axes = plt.subplots(1, 3, figsize=(13, 4), layout="constrained")
     agreements = []
     colors = []
@@ -59,7 +81,3 @@ def render(reports: list[dict], manifests: list[dict], destination: Path) -> Non
     axes[0].legend()
     fig.savefig(destination / "behavior.png", dpi=160)
     plt.close(fig)
-    (destination / "profile.json").write_text(
-        json.dumps(reports, indent=2, allow_nan=False) + "\n",
-        encoding="utf-8",
-    )

@@ -12,7 +12,8 @@ from uuid import uuid4
 
 from . import __version__
 from .config import Settings
-from .probes import configurations, plan, scenarios
+from .pilot import probe_bank
+from .probes import plan
 from .providers import Provider, parse_choice, provider_for
 
 
@@ -81,15 +82,18 @@ def create_run(db: sqlite3.Connection, settings: Settings, provider: Provider) -
     if metadata is None:
         raise ValueError(f"Model {model!r} is absent from the provider model list")
     run_id = uuid4().hex
-    trials = plan(settings.seed, settings.repeats, settings.configuration_ids)
-    probe_bank = {item.id: asdict(item) for item in scenarios()}
+    trials = plan(settings.seed, settings.repeats, settings.configuration_ids, settings.benchmark)
+    candidates, probes = probe_bank(settings.benchmark)
+    scenario_bank = {item.id: asdict(item) for item in probes}
     selected = {trial["configuration"] for trial in trials}
-    configs = {item.id: asdict(item) for item in configurations() if item.id in selected}
+    configs = {item.id: asdict(item) for item in candidates if item.id in selected}
+    protocol_version = 2 if settings.benchmark == "0.2.0" else 1
     manifest = {
         "run_id": run_id,
         "schema_version": 1,
         "created_at": now(),
-        "benchmark_version": __version__,
+        "benchmark_version": settings.benchmark,
+        "package_version": __version__,
         "git_revision": revision(),
         "code_hash": digest(
             {
@@ -98,11 +102,11 @@ def create_run(db: sqlite3.Connection, settings: Settings, provider: Provider) -
             }
         ),
         "python_version": sys.version.split()[0],
-        "scenario_version": 1,
-        "generator_version": 1,
-        "prompt_version": 1,
+        "scenario_version": protocol_version,
+        "generator_version": protocol_version,
+        "prompt_version": protocol_version,
         "parser_version": 1,
-        "scenario_hash": digest(probe_bank),
+        "scenario_hash": digest(scenario_bank),
         "generator_hash": digest(configs),
         "model": model,
         "model_metadata": metadata,
@@ -118,7 +122,7 @@ def create_run(db: sqlite3.Connection, settings: Settings, provider: Provider) -
             ),
             "token_usage": "when returned",
         },
-        "scenarios": probe_bank,
+        "scenarios": scenario_bank,
         "configurations": configs,
         "plan": trials,
         "plan_hash": digest(trials),

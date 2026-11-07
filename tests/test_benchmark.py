@@ -168,11 +168,14 @@ def test_cli_end_to_end(tmp_path, capsys):
     assert main(args + ["export", run_id, "--format", "csv"]) == 0
     assert len(capsys.readouterr().out.splitlines()) >= 721
     assert main(args + ["export", run_id, "--format", "jsonl"]) == 0
-    assert len(capsys.readouterr().out.splitlines()) == 721
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) == 721
+    assert json.loads(lines[0])["profile"]["city_equivalent"]["status"] == "uncalibrated"
     pytest.importorskip("matplotlib")
     destination = tmp_path / "report"
     assert main(args + ["report", run_id, "--output", str(destination)]) == 0
     assert (destination / "behavior.png").read_bytes().startswith(b"\x89PNG")
+    assert "Equivalent population: uncalibrated" in (destination / "profile.txt").read_text()
     assert json.loads((destination / "profile.json").read_text())[0]["run_id"] == run_id
 
 

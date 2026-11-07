@@ -66,6 +66,80 @@ are sanity checks. Blind external probes, weaker steering controls,
 threshold sensitivity, quantization comparisons and downstream validation
 are needed before interpreting cross-model differences as a model property.
 
+## v0.2 factorial design
+
+The pilot crosses four binary factors with a three-level verification
+factor to obtain 48 profiles. Each profile has two prompt treatments.
+Strong prompts state behavioral priorities directly. Weak prompts
+describe previous roles and work without instructing the model to favor
+an option. The third level leaves the verification cue unspecified. Four
+non-steering control wordings bring the total to 100. The structured
+oracle follows binary axes and maps the unspecified level to its default.
+The random oracle selects independently using the planned trial seed.
+The constant oracle always selects the same canonical action.
+
+Ten scenario families cover risk, resource sharing, time preference,
+information disclosure, and verification. Each family contributes a
+base, paraphrase, and counterfactual probe. Five parallel families are
+held out from the discovery distance, with one held-out family per
+axis. These are authored parallel probes. They need independent
+validation before they can support broad generalization claims.
+
+The v2 raw estimator tolerates missing primary responses when every
+primary cell retains at least 75% of scheduled repeats and both
+preassigned repeat halves. Repeat agreement uses the observed number of
+valid draws, and distances retain the original half assignments. The
+v0.1 estimator keeps its complete-cell rule. Missing decisions can bias
+both estimators, especially if errors favor a particular choice or prompt.
+
+## v0.2 city-equivalent index
+
+Scoring v1 uses the weak-prompt repertoire only. Among weak prompts
+that pass the repeated and paraphrase agreement gates on both splits,
+collapse identical repeat-half choice probability vectors and greedily
+pack candidates in lexicographic vector order. Each pair must meet
+the replicated distance threshold on both discovery and held-out
+families. Strong and neutral packs are reported separately as diagnostics.
+Stable weak repertoire gets weight 1. Descriptive rank and entropy get
+weight 0. Adding an unstable prompt or an exact measured duplicate does
+not increase the pack. Finite-sample coincidences and near duplicates
+can still affect it.
+
+Let K be the weak pack size, Kref the upper anchor repertoire, and Pmin
+and Pref the two calibration populations. The provisional normalized
+quantity is max(0, K - 1) / (Kref - 1). Interpolate linearly between
+log(Pmin) and log(Pref) using that quantity, then exponentiate and round.
+Calibration v1 defaults to 500 at zero or one policy and 40,000,000 at
+40 policies. The default structured synthetic control has 32 distinct
+policies, below the New York City and Tokyo aspirational references.
+These are illustrative design choices. No benchmark observations
+establish a frontier range. Extrapolated scores carry a warning and
+retain their numerical value. The city label is the catalog entry
+with minimum absolute log-population distance.
+
+A numeric score requires a finished v0.2 pilot with all 100 planned
+prompts, 30 probes, at least four repeats, and at least 95% valid
+decisions overall. The gates require distance of at least 0.2 and
+stability of at least 0.8. At least 36 weak, 36 strong, and two neutral
+prompts must have scorable primary cells. All numeric estimates are
+provisional. Confidence is exploratory for model runs, synthetic-control
+for mock runs, and insufficient-evidence when the score is uncalibrated.
+The population interval reflects sensitivity to greedy packing order
+on the observed data. The raw family bootstrap reflects probe sampling
+sensitivity for rank and repeat agreement. Neither measures population
+calibration error.
+
+The v1 catalog uses U.S. Census incorporated-place boundaries for
+small settlements and urban-area boundaries for larger cities. Each
+entry carries its source, geography and reference year. Urban areas
+represent settlement footprints. The UN Degree of Urbanization and
+U.S. Census criteria delineate these footprints differently. Tokyo
+and New York City are UN urban areas in the matching catalog. The
+separate metropolitan Tokyo aspirational tier uses the four-prefecture
+definition from Japan's preliminary 2025 census. City labels are
+illustrative analogies sensitive to the available references and their
+boundaries. [U.S. incorporated places](https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html) · [U.S. urban areas](https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html) · [UN urban areas](https://population.un.org/wup/assets/Publications/undesa_pd_2025_wup2025_summary_of_results_final.pdf) · [Japan census](https://www.stat.go.jp/english/info/news/20260625.html)
+
 ## Research bibliography
 
 - Pugh, Soros and Stanley motivate future diversity-driven candidate search.

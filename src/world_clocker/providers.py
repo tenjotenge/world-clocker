@@ -94,7 +94,7 @@ class MockProvider:
         elif (
             model == "structured" and config["factors"] and scenario["variant"] != "counterfactual"
         ):
-            action = config["factors"][scenario["axis"]]
+            action = int(config["factors"][scenario["axis"]] == 1)
         label = "AB"[trial["mapping"].index(str(action))]
         return Completion(json.dumps({"choice": label}))
 

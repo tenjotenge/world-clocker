@@ -5,7 +5,8 @@ from urllib.parse import urlsplit
 
 import yaml
 
-from .probes import configurations
+from .calibration import Calibration
+from .pilot import probe_bank
 
 
 @dataclass(frozen=True)
@@ -26,10 +27,18 @@ class Settings:
     stability: float = 0.8
     bootstrap: int = 200
     configuration_ids: tuple[str, ...] | None = None
+    benchmark: str = "0.1.0"
+    calibration: Calibration = Calibration()
 
     def __post_init__(self) -> None:
         if type(self.schema_version) is not int or self.schema_version != 1:
             raise ValueError("Unsupported configuration schema")
+        if self.benchmark not in ("0.1.0", "0.2.0"):
+            raise ValueError("Unsupported benchmark version")
+        if isinstance(self.calibration, dict):
+            object.__setattr__(self, "calibration", Calibration(**self.calibration))
+        if not isinstance(self.calibration, Calibration):
+            raise ValueError("calibration must be a mapping")
         if self.provider not in ("mock", "openai"):
             raise ValueError("provider must be mock or openai")
         if self.model is not None and (not isinstance(self.model, str) or not self.model.strip()):
@@ -72,7 +81,7 @@ class Settings:
                 raise ValueError(f"{name} must be positive")
         if self.configuration_ids is not None:
             ids = self.configuration_ids
-            known = {config.id for config in configurations()}
+            known = {config.id for config in probe_bank(self.benchmark)[0]}
             if (
                 not isinstance(ids, (list, tuple))
                 or not ids

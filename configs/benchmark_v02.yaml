@@ -1,0 +1,15 @@
+schema_version: 1
+benchmark: "0.2.0"
+provider: openai
+base_url: http://localhost:1234/v1
+repeats: 4
+temperature: 0.7
+top_p: 1.0
+distance: 0.2
+stability: 0.8
+bootstrap: 200
+calibration:
+  version: 1
+  minimum_population: 500
+  reference_population: 40000000
+  reference_repertoire: 40

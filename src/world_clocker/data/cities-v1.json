@@ -1,0 +1,293 @@
+{
+  "version": 1,
+  "boundary_policy": "Incorporated-place boundaries for small settlements and urban footprints for larger settlements. Delineation varies by source.",
+  "aspirational_tiers": [
+    {
+      "city": "New York City",
+      "country": "United States",
+      "population": 13920000,
+      "geography": "urban area",
+      "year": 2025,
+      "source": "https://population.un.org/wup/assets/Publications/undesa_pd_2025_wup2025_summary_of_results_final.pdf"
+    },
+    {
+      "city": "Metropolitan Tokyo",
+      "country": "Japan",
+      "population": 36986000,
+      "geography": "metropolitan area",
+      "year": 2025,
+      "source": "https://www.stat.go.jp/english/info/news/20260625.html",
+      "definition": "Preliminary 2025 census count for Tokyo, Kanagawa, Saitama and Chiba"
+    }
+  ],
+  "entries": [
+    {
+      "city": "Hunter, NY",
+      "population": 429,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Cassadaga, NY",
+      "population": 573,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Candor, NY",
+      "population": 786,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Saddle Rock, NY",
+      "population": 989,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Sackets Harbor, NY",
+      "population": 1351,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Cooperstown, NY",
+      "population": 1794,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Lake Placid, NY",
+      "population": 2205,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Sag Harbor, NY",
+      "population": 2772,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Carthage, NY",
+      "population": 3236,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Island Park, NY",
+      "population": 4928,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Irvington, NY",
+      "population": 6652,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Johnstown, NY",
+      "population": 8204,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Lancaster, NY",
+      "population": 10027,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Tarrytown, NY",
+      "population": 11860,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Johnson City, NY",
+      "population": 15343,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Rye, NY",
+      "population": 16592,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Jamestown, NY",
+      "population": 28712,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Ithaca, NY",
+      "population": 32108,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Syracuse, NY",
+      "population": 148620,
+      "country": "United States",
+      "geography": "city proper",
+      "year": 2020,
+      "source": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_incplace_2020_tab20_ny.html"
+    },
+    {
+      "city": "Modesto",
+      "population": 357301,
+      "country": "United States",
+      "geography": "urban area",
+      "year": 2020,
+      "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html"
+    },
+    {
+      "city": "Honolulu",
+      "population": 853252,
+      "country": "United States",
+      "geography": "urban area",
+      "year": 2020,
+      "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html"
+    },
+    {
+      "city": "San Jose",
+      "population": 1837446,
+      "country": "United States",
+      "geography": "urban area",
+      "year": 2020,
+      "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html"
+    },
+    {
+      "city": "Las Vegas-Henderson-Paradise",
+      "population": 2196623,
+      "country": "United States",
+      "geography": "urban area",
+      "year": 2020,
+      "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html"
+    },
+    {
+      "city": "San Diego",
+      "population": 3070300,
+      "country": "United States",
+      "geography": "urban area",
+      "year": 2020,
+      "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html"
+    },
+    {
+      "city": "San Francisco-Oakland",
+      "population": 3515933,
+      "country": "United States",
+      "geography": "urban area",
+      "year": 2020,
+      "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html"
+    },
+    {
+      "city": "Dallas-Fort Worth-Arlington",
+      "population": 5732354,
+      "country": "United States",
+      "geography": "urban area",
+      "year": 2020,
+      "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html"
+    },
+    {
+      "city": "Miami-Fort Lauderdale",
+      "population": 6077522,
+      "country": "United States",
+      "geography": "urban area",
+      "year": 2020,
+      "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html"
+    },
+    {
+      "city": "Chicago",
+      "population": 8671746,
+      "country": "United States",
+      "geography": "urban area",
+      "year": 2020,
+      "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html"
+    },
+    {
+      "city": "Los Angeles-Long Beach-Anaheim",
+      "population": 12237376,
+      "country": "United States",
+      "geography": "urban area",
+      "year": 2020,
+      "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural/2020-ua-facts.html"
+    },
+    {
+      "city": "New York City",
+      "country": "United States",
+      "population": 13920000,
+      "aspirational": true,
+      "geography": "urban area",
+      "year": 2025,
+      "source": "https://population.un.org/wup/assets/Publications/undesa_pd_2025_wup2025_summary_of_results_final.pdf"
+    },
+    {
+      "city": "Tokyo",
+      "country": "Japan",
+      "population": 33413000,
+      "aspirational": true,
+      "geography": "urban area",
+      "year": 2025,
+      "source": "https://population.un.org/wup/assets/Publications/undesa_pd_2025_wup2025_summary_of_results_final.pdf"
+    },
+    {
+      "city": "Dhaka",
+      "country": "Bangladesh",
+      "population": 36585000,
+      "aspirational": false,
+      "geography": "urban area",
+      "year": 2025,
+      "source": "https://population.un.org/wup/assets/Publications/undesa_pd_2025_wup2025_summary_of_results_final.pdf"
+    },
+    {
+      "city": "Jakarta",
+      "country": "Indonesia",
+      "population": 41914000,
+      "aspirational": false,
+      "geography": "urban area",
+      "year": 2025,
+      "source": "https://population.un.org/wup/assets/Publications/undesa_pd_2025_wup2025_summary_of_results_final.pdf"
+    }
+  ]
+}

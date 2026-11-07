@@ -7,6 +7,34 @@ complexity. It reports a profile with rank, entropy, stability, distances and
 discovery curves. See [methodology](docs/methodology.md) and
 [architecture](docs/architecture.md).
 
+## v0.2 factorial pilot
+
+The v0.2 definition runs 100 prompts against 30 probes with four repeats
+by default. It includes 48 matched strong and weak prompt pairs, four
+neutral controls, and five held-out scenario families. Run it offline with
+the structured, constant, or random synthetic provider:
+
+```powershell
+& $wc benchmark validate configs/benchmark_v02.yaml
+& $wc benchmark run configs/benchmark_v02.yaml --provider mock --model structured
+& $wc profile RUN_ID
+& $wc profile RUN_ID --json
+& $wc analyze RUN_ID --raw
+& $wc report RUN_ID --output results/pilot
+```
+
+Set `$wc` using the installation instructions below. For LM Studio, omit
+`--provider mock` and use an ID from `models list`. The default is 12,000
+trials per model. Use `--budget` to limit a batch and `benchmark resume`
+to continue. Small subsets and unfinished runs report an uncalibrated city.
+
+The capacity profile includes a **provisional city-equivalent population**
+when the pilot meets its evidence requirements. This is a metaphorical index
+of stable weak-prompt differentiation. Raw metrics remain available through
+`analyze --raw`. The text and JSON reports include the city boundary, source,
+reference year, coverage, and confidence. Install the optional `plots` extra
+to also generate a PNG. See the [scoring methodology](docs/methodology.md#v02-city-equivalent-index).
+
 ## Offline smoke test
 
 Python 3.11 or newer is required. From the repository root in PowerShell:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "world-clocker"
-version = "0.1.0"
+version = "0.2.0"
 description = "A benchmark for accessible behavioral repertoires"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -19,6 +19,9 @@ world-clocker = "world_clocker.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+world_clocker = ["data/*.json"]
 
 [tool.ruff]
 line-length = 100
