@@ -35,3 +35,8 @@ database and raw metrics intact. Comparison reports require the same
 protocol, sampling conditions, metric versions, and calibration.
 Optional model annotations live in the run manifest alongside provider
 metadata and sampling settings. They never enter the scoring transform.
+
+See the [experiment runbook](experiment_runbook.md) for the operational
+contract when resuming, moving, or comparing runs. The
+[results record](experiment_results.md) tracks verified baselines and explains
+which evidence requires the original machine's local storage.
